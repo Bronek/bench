@@ -1,0 +1,15 @@
+.idea/
+.idea_modules/
+.build*/
+dist*/
+result*
+.clangd
+.cache/
+.devcontainer/
+.venv/
+.vscode/
+*.iws
+*.swp
+*.swo
+*~
+~$*.doc
