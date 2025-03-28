@@ -14,17 +14,15 @@ constexpr int inputSize = 3;
 
 
 static_assert(inputSize <= 8); // Map every input to one of 8 functions below
-int f0(int i) { return i + 12; }
-int f1(int i) { return i * 2; }
-int f2(int i) { return i / 2; }
-int f3(int i) { return i * 5; }
-int f4(int i) { return i / 5; }
-int f5(int i) { return i - 40; }
-int f6(int i) { return i % 12; }
-int f7(int i) { return i * 12; }
-using ft = int (*)(int);
-
-int volatile dummy = 0;
+void f0(int &t, int i) { t += i + 12; }
+void f1(int &t, int i) { t += i * 2; }
+void f2(int &t, int i) { t += i / 2; }
+void f3(int &t, int i) { t += i * 5; }
+void f4(int &t, int i) { t += i / 5; }
+void f5(int &t, int i) { t += i - 40; }
+void f6(int &t, int i) { t += i % 12; }
+void f7(int &t, int i) { t += i * 12; }
+using ft = void (*)(int &, int);
 
 struct accumulator {
   std::atomic<std::int64_t> count = 0;
@@ -49,7 +47,7 @@ struct accumulator {
   }
 };
 
-void benchMap(int input, accumulator &acc)
+void benchMap(int &dummy, int input, accumulator &acc)
 {
   static std::map<int, ft> const fields{
       {0, &f0}, {1, &f1}, {2, &f2}, {3, &f3}, {4, &f4}, {5, &f5}, {6, &f6}, {7, &f7},
@@ -57,47 +55,47 @@ void benchMap(int input, accumulator &acc)
 
   auto const start = acc.start();
   auto const p = fields.find(input);
-  dummy += (*(p->second))(input);
+  (*(p->second))(dummy, input);
   acc.stop(start);
 }
 
-void benchArray(int input, accumulator &acc)
+void benchArray(int &dummy, int input, accumulator &acc)
 {
   static std::array<ft, 8> fields = {&f0, &f1, &f2, &f3, &f4, &f5, &f6, &f7};
 
   auto const start = acc.start();
   auto const p = fields[input];
-  dummy += (*p)(input);
+  (*p)(dummy, input);
   acc.stop(start);
 }
 
-void benchSwitch(int input, accumulator &acc)
+void benchSwitch(int &dummy, int input, accumulator &acc)
 {
   auto const start = acc.start();
   switch (input) {
   case 0:
-    dummy += f0(input);
+    f0(dummy, input);
     break;
   case 1:
-    dummy += f1(input);
+    f1(dummy, input);
     break;
   case 2:
-    dummy += f2(input);
+    f2(dummy, input);
     break;
   case 3:
-    dummy += f3(input);
+    f3(dummy, input);
     break;
   case 4:
-    dummy += f4(input);
+    f4(dummy, input);
     break;
   case 5:
-    dummy += f5(input);
+    f5(dummy, input);
     break;
   case 6:
-    dummy += f6(input);
+    f6(dummy, input);
     break;
   case 7:
-    dummy += f7(input);
+    f7(dummy, input);
     break;
   }
   acc.stop(start);
@@ -124,18 +122,20 @@ int main()
         std::ranlux48 rnd;
         rnd.seed(dev());
         std::uniform_int_distribution<int> dist(0, 1000);
+        int dummy = 0;
 
         auto const l = (i += 1);
         if ((l % 100) == 0) {
           // Actual benchmarks
           if ((l % 300) == 0) {
-            benchMap(dist(rnd) % inputSize, accMap);
+            benchMap(dummy, dist(rnd) % inputSize, accMap);
           } else if (((l + 100) % 300) == 0) {
-            benchArray(dist(rnd) % inputSize, accArray);
+            benchArray(dummy, dist(rnd) % inputSize, accArray);
           } else {
-            benchSwitch(dist(rnd) % inputSize, accSwitch);
+            benchSwitch(dummy, dist(rnd) % inputSize, accSwitch);
           }
 
+          k = dummy;
           return;
         }
 
@@ -159,14 +159,13 @@ int main()
         // Emulate waiting for some io
         auto const t = dist(rnd) % 100;
         if (t > 30)
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+          std::this_thread::sleep_for(std::chrono::microseconds(3));
       });
     }
 
     pool.stop();
   }
 
-  std::cout << "map: " << accMap << '\n'
-            << "array: " << accArray << '\n'
-            << "switch: " << accSwitch << std::endl;
+  std::cout << "map: " << accMap << '\n' << "array: " << accArray << '\n' << "switch: " << accSwitch << std::endl;
+  return (((int)k * 10) % 5);
 }
