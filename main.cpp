@@ -155,11 +155,6 @@ int main()
           total += element;
 
         k += (total / set.size());
-
-        // Emulate waiting for some io
-        auto const t = dist(rnd) % 100;
-        if (t > 30)
-          std::this_thread::sleep_for(std::chrono::microseconds(3));
       });
     }
 
