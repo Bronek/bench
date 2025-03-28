@@ -73,7 +73,7 @@ private:
     }
   }
 
-  using task = std::move_only_function<void()>;
+  using task = std::function<void()>;
 
   std::vector<std::thread> threads;
   std::queue<task> queue;
